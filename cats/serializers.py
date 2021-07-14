@@ -1,16 +1,15 @@
 from rest_framework import serializers
 import datetime as dt
 import webcolors
-from .models import Cat, Owner, Achievement, AchievementCat
+from .models import Cat, Owner, Achievement, AchievementCat, CHOICES
 
 
 class Hex2NameColor(serializers.Field):
-    # При чтении данных ничего не меняем - просто возвращаем как есть
     def to_representation(self, value):
         return value
-    # При записи код цвета конвертируется в его название
+
     def to_internal_value(self, data):
-        # Доверяй, но проверяй
+
         try:
             # Если имя цвета существует, то конвертируем код в название
             data = webcolors.hex_to_name(data)
@@ -22,18 +21,20 @@ class Hex2NameColor(serializers.Field):
 
 
 class AchievementSerializer(serializers.ModelSerializer):
+    achievement_name = serializers.CharField(source='name')
 
     class Meta:
         model = Achievement
-        fields = ('id', 'name') 
+        fields = ('id', 'achievement_name') 
 
 
 class CatSerializer(serializers.ModelSerializer):
     # owner = serializers.StringRelatedField(read_only=True)
     achievements = AchievementSerializer(many=True, required=False)
     age = serializers.SerializerMethodField()
-    color = Hex2NameColor()  # Вот он - наш собственный тип поля
-    
+    # color = Hex2NameColor()
+    color = serializers.ChoiceField(choices=CHOICES)
+
     class Meta:
         model = Cat
         fields = ('id', 'name', 'color', 'birth_year', 'owner', 'achievements',
@@ -60,6 +61,14 @@ class CatSerializer(serializers.ModelSerializer):
                 AchievementCat.objects.create(
                     achievement=current_achievement, cat=cat)
             return cat
+
+
+class CatListSerializer(serializers.ModelSerializer):
+    color = serializers.ChoiceField(choices=CHOICES)    
+    class Meta:
+        model = Cat
+        fields = ('id', 'name', 'color')
+
 
 class OwnerSerializer(serializers.ModelSerializer):
     cats = serializers.StringRelatedField(many=True, read_only=True)
